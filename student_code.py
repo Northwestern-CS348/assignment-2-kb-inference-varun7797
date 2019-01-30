@@ -116,7 +116,7 @@ class KnowledgeBase(object):
             print("Invalid ask:", fact.statement)
             return []
 
-    def kb_retract(self, fact_or_rule):
+    def kb_retract(self, fact):
         """Retract a fact from the KB
 
         Args:
@@ -125,7 +125,7 @@ class KnowledgeBase(object):
         Returns:
             None
         """
-        printv("Retracting {!r}", 0, verbose, [fact_or_rule])
+        printv("Retracting {!r}", 0, verbose, [fact])
         ####################################################
         # Student code goes here
         
