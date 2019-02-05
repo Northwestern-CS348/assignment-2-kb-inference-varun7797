@@ -116,33 +116,81 @@ class KnowledgeBase(object):
             print("Invalid ask:", fact.statement)
             return []
 
-    def kb_retract(self, fact):
+    def kb_retract(self, fact_or_rule):
         """Retract a fact from the KB
-
-        Args:
+            Args:
             fact (Fact) - Fact to be retracted
-
-        Returns:
+            Returns:
             None
-        """
-        printv("Retracting {!r}", 0, verbose, [fact])
+            """
+        printv("Retracting {!r}", 0, verbose, [fact_or_rule])
         ####################################################
         # Student code goes here
-        
+            
+        if isinstance(fact_or_rule, Fact):
+            retract_fact = self.facts[self.facts.index(fact_or_rule)]
+            if retract_fact.supported_by:
+                retract_fact.asserted = False
+            else:
+                for i in retract_fact.supports_facts:
+                    sup_fact = self._get_fact(i)
+                    for j in sup_fact.supported_by:
+                        if retract_fact in j:
+                            sup_fact.supported_by.remove(j)
+                    self.kb_retract(sup_fact)
+                for i in retract_fact.supports_rules:
+                    sup_rule = self._get_rule(i)
+                    for j in sup_rule.supported_by:
+                        if retract_fact in j:
+                            sup_rule.supported_by.remove(j)
+                    self.kb_retract(sup_rule)
+                self.facts.remove(retract_fact)
+                
+        elif isinstance(fact_or_rule, Rule):
+            retract_rule = self.rules[self.rules.index(fact_or_rule)]
+            if not retract_rule.supported_by and not retract_rule.asserted:
+                for fact in retract_rule.supports_facts:
+                    sup_fact = self.facts[self.facts.index(fact)]
+                    for j in sup_fact.supported_by:
+                        if retract_rule in j:
+                            sup_fact.supported_by.remove(j)
+                    self.kb_retract(sup_fact)
+                for rule in retract_rule.supports_rules:
+                    sup_rule = self.rules[self.rules.index(rule)]
+                    for j in sup_rule.supported_by:
+                        if retract_rule in j:
+                            sup_rule.supported_by.remove(j)
+                    self.kb_retract(sup_rule)
+                self.rules.remove(retract_rule)
+
+
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
         """Forward-chaining to infer new facts and rules
-
+            
         Args:
             fact (Fact) - A fact from the KnowledgeBase
             rule (Rule) - A rule from the KnowledgeBase
-            kb (KnowledgeBase) - A KnowledgeBase
-
+        kb (KnowledgeBase) - A KnowledgeBase
+        
         Returns:
-            Nothing            
+            Nothing
         """
         printv('Attempting to infer from {!r} and {!r} => {!r}', 1, verbose,
-            [fact.statement, rule.lhs, rule.rhs])
+               [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+
+        binding = match(fact.statement, rule.lhs[0])
+        if binding:
+            if len(rule.lhs) == 1:
+                infer_fact = Fact(instantiate(rule.rhs, binding), [[fact, rule]])
+                fact.supports_facts.append(infer_fact)
+                rule.supports_facts.append(infer_fact)
+                kb.kb_add(infer_fact)
+            else:
+                infer_rule = Rule([[instantiate(state_lhs, binding) for state_lhs in rule.lhs[1:]], instantiate(rule.rhs, binding)], [[fact, rule]])
+                fact.supports_rules.append(infer_rule)
+                rule.supports_rules.append(infer_rule)
+                kb.kb_add(infer_rule)
